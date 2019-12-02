@@ -7,9 +7,8 @@ void QueueStreamer::onRevision(Revision rev) {
 }
 
 std::optional<Revision> QueueStreamer::pop() {
-  while(q.size() < 10) {
+  while(q.size() < 10)
     readNextBlock();
-  }
   if(q.empty()) {
     std::cout << "q is emptyu" << std::endl;
     return {};
@@ -21,15 +20,8 @@ std::optional<Revision> QueueStreamer::pop() {
 
 LockQueueStreamer::LockQueueStreamer(const std::string &path, moodycamel::BlockingReaderWriterQueue<Revision> &q) : RevisionStreamer(path), q(q) {}
 void LockQueueStreamer::streamTo() {
-  while(!shouldStop) {
+  while(!shouldStop)
     readNextBlock();
-/*    auto revOpt = streamer.pop();
-    if(!revOpt) {
-      std::cout << "Done streaming" << std::endl;
-      return;
-    }
-    q.enqueue(revOpt.value());
-*/  }
 }
 
 void LockQueueStreamer::stop() {

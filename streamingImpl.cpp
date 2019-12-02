@@ -257,7 +257,6 @@ class StreamingAlgo {
   std::vector<std::pair<HHash, SHash>> hashes;
   KMaxHeap maxHeap;
 public:
-//counters(t, std::vector<int>(b, 0)),
   StreamingAlgo(int k, unsigned seed, long long t, long long b) : b(b), t(t), hashes(getHashes(seed, t, b)), maxHeap(k) {}
   int bytesize() {
     long long sz = 0;

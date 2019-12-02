@@ -11,10 +11,8 @@
 
 int main() {
   std::string outPath = "./out.data";
-
   moodycamel::BlockingReaderWriterQueue<Revision> q(4096);
   // Main Queue.
-
   int i = 0;
   int nRead = 100000;
   int lastArticleId = -1;
