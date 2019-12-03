@@ -35,6 +35,7 @@ set(HDRS
 
 add_executable(${PROJECT_NAME} zipMain.cpp ${SRCS} ${HDRS})
 add_executable("hash${PROJECT_NAME}" streamingImpl.cpp ${SCRS} ${HDRS})
+add_executable("zipfdata${PROJECT_NAME}" zipfgen.cpp ${SCRS} ${HDRS})
 
 #target_link_libraries (${PROJECT_NAME} PRIVATE BZip2::BZip2)
 #target_include_directories(bstreamer PRIVATE ${BZIP2_INCLUDE_DIR})

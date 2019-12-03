@@ -69,43 +69,57 @@ public:
 ************************************************/
 
 // Cache the primes that have been generated previously for performance.
-std::vector<long long> primes;
-long long primeGt(long long x) {
-  // Find a prime greater than x
-  long long i = 2;
-  if(primes.size() > 0)
-    i = primes.back();
-  if(i > x)
-    return i; // Easy performance optimization.
-
-  for(; i <= x; ++i) {
-    bool divisable = false;
-    for(long long y : primes) {
-      if(i % y == 0)
-        divisable = true;
-        break;
-    }
-    if(!divisable)
-      primes.push_back(i);
-  }
-
-  std::cout << "Done with initial prime gen..." << std::endl;
-  while(true) {
-    ++x;
-    bool divisable = false;
-    for(long long y : primes) {
-      if(x % y == 0) {
-        divisable = true;
-        break;
+// But also need to make sure the primes are indepdendant from each other.
+class RandomPrime {
+  std::vector<int> primes;
+  std::default_random_engine dev;
+public:
+  RandomPrime(int gte, int n, int seed) : dev(seed) {
+    std::vector<int> p;
+    std::cout << "Generating primes" << std::endl;
+    for(int i = 2; i <= gte; ++i) {
+      bool divisable = false;
+      for(int pp : p) {
+        if(i % pp == 0) {
+          divisable = true;
+          break;
+        }
       }
-        
+      if(!divisable)
+        p.push_back(i);
     }
-    if(!divisable) {
-      primes.push_back(x);
-      return x;
+
+    std::cout << "Done first step" << std::endl;
+    while(n >= primes.size()) {
+      ++gte;
+      bool divisable = false;
+      for(int pp : p) {
+        if(gte % pp == 0) {
+          divisable = true;
+          break;
+        }
+      }
+      if(!divisable) {
+        for(int pp : primes) {
+          if(gte % pp == 0) {
+            divisable = true;
+            break;
+          }
+        }
+      }
+      if(!divisable)
+        primes.push_back(gte);
     }
-      
+    std::cout << "Done generating primes" << std::endl;
   }
+  long long randomPrime() {
+    std::uniform_int_distribution<int> dist(0, primes.size()-1);
+    return primes[dist(dev)];
+  }
+};
+RandomPrime _prime(2*1000*1000, 2000, 103045);
+long long primeGt(long long x) {
+  return _prime.randomPrime();
 }
 
 // From: Carter, Larry; Wegman, Mark N. (1979). "Universal Classes of Hash Functions"
@@ -323,7 +337,7 @@ constexpr int approxN() {
 }
 
 constexpr double getDelta() {
-  return 0.001;
+  return 1e-12;
 }
 
 constexpr double getT(double epsilon) {
@@ -341,7 +355,10 @@ class RandomShuffledStreamer : public BinaryStreamer<RandomShuffledStreamer> {
 
 public:
   std::unordered_map<int,int> actualOccurenceCounts;
-  RandomShuffledStreamer(const std::string &path, unsigned seed, long long t, long long b, int k) : BinaryStreamer<RandomShuffledStreamer>(path), algo(k, seed, t, b), k(k), t(t), b(b) {}
+  RandomShuffledStreamer(const std::string &path, unsigned seed, long long t, long long b, int k) : BinaryStreamer<RandomShuffledStreamer>(path), algo(k, seed, t, b), k(k), t(t), b(b) {
+    std::default_random_engine dev(seed);
+    std::shuffle(block.begin(), block.end(), dev);
+  }
   void onRevision(Revision rev) {
     if(i % 500000 == 0) {
       std::cout << i << ", " << timer.toString() << "         \r" << std::flush;
@@ -427,7 +444,7 @@ void datastats(const NaiveStreamer &streamer) {
   std::cout << "m is: " << occs.size() << std::endl;
 }
 
-int main(int argc, char* argv[]) {
+void testfilegen() {
   {
     /*
       Write to test file
@@ -447,6 +464,9 @@ int main(int argc, char* argv[]) {
 
     ofs.write((char*)&revs[0], revs.size() * sizeof(Revision));
   }
+}
+
+void wikidata() {
   std::string dataPath = "./out.data";
   NaiveStreamer streamer(dataPath);
   streamer.startStream();
@@ -455,15 +475,50 @@ int main(int argc, char* argv[]) {
   int k = 40;
   int t = getT(getDelta());
   int b = calcB(getOccurences(streamer), k, 0.1) ;
-  std::cout << "Should have used: " << 2779191 / (1024*1024) << " MB for naive implementation." << std::endl;
-  std::cout << "Complete sum: " << b << ", should use: " << getT(getDelta()) * b / (1024*1024) << " MB of memory." << std::endl;
-  if(argc > 1)
-    datastats(streamer);
+  std::cout << "Should have used: " << streamer.articleOccurences.size() / (1024*1024) << " MB for naive implementation." << std::endl;
+  std::cout << "Complete sum: " << b << ", should use: " << t * b / (1024*1024) << " MB of memory." << std::endl;
 
   {
     RandomShuffledStreamer rstreamer(dataPath, /*seed*/101230, t, b, k);
     rstreamer.actualOccurenceCounts = streamer.articleOccurences;
     rstreamer.startStream();
   }
+}
 
+void dstats() {
+  std::string dataPath = "./out.data";
+  NaiveStreamer streamer(dataPath);
+  datastats(streamer);
+
+}
+
+void zipfdata(int k) {
+  std::string dataPath = "./zipfout.data";
+  NaiveStreamer streamer(dataPath);
+  streamer.startStream();
+  std::cout << "N: " << streamer.i << ", unique: " << streamer.nArticle << std::endl;
+
+  int t = 13; // std::log(10000000 / 1e-12); this overflows otherwise
+  int b = calcB(getOccurences(streamer), k, 0.1);
+  std::cout << "Should have used: " << streamer.articleOccurences.size() / (1024 * 1024) << " MB for naive implementation." << std::endl;
+  std::cout << "Complete sum: " << b << ", should use: " << t * b / (1024) << " KB of memory." << std::endl;
+  {
+    RandomShuffledStreamer rstreamer(dataPath, /*seed*/101230, t, b, k);
+    rstreamer.actualOccurenceCounts = streamer.articleOccurences;
+    rstreamer.startStream();
+  }
+}
+
+int main(int argc, char* argv[]) {
+  if(argc > 1)
+    dstats();
+//  wikidata();
+  std::vector<int> ks{1,2,3,5,10,20};
+  for(int k : ks) {
+    std::cout << std::endl;
+    std::cout << "------------------------------" << std::endl;
+    std::cout << std::endl;
+    zipfdata(k);
+  }
+    
 }
