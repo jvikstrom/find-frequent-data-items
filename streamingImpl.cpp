@@ -389,7 +389,7 @@ public:
       std::cout << "  " << (i+1) << "th most common: " << key << " with " << value << " occurences, actual: " << actualOccurenceCounts[key] << std::endl;
       i++;
     }
-    std::cout << "Used: " << algo.bytesize() / (1024 * 1024) << " MB of memory" << std::endl;
+    std::cout << "Used: " << (double)algo.bytesize() / (1024.0 * 1024.0) << " MB of memory" << std::endl;
   }
 };
 
@@ -426,19 +426,19 @@ void datastats(const NaiveStreamer &streamer) {
   for(int i : occs)
     occfd << i << "\n";
   std::cout << "Writing k - b pairs to file" << std::endl;
-  long long t = getT(getDelta());
-  for(int i = 1; i < occs.size() - 1; ++i) {
+  long long t = 14;//getT(getDelta());
+  for(int i = 1; i < (int)occs.size() - 1; ++i) {    
+    if(i % 100 == 0) {
+      std::cout << "Wrote " << i << "/" << occs.size() << ": " << occs.at(i) << "         \r" << std::flush;
+    }
+    long long b = calcB(occs, i, 1.0);
+    kbpairfd << i << "," << b << "," << t << "," << b*t << "\n";
     if(i > 5000)
       i += 10;
     if(i > 25000)
       i+=100;
     if(i > 5000*20)
       i+=1000;
-    
-    if(i % 1000)
-      std::cout << "Wrote " << i << "/" << occs.size() << ": " << occs[i] << "         \r" << std::flush;
-    long long b = calcB(occs, i, 0.1);
-    kbpairfd << i << "," << b << "," << t << "," << b*t << "\n";
   }
   std::cout << "Done writing to file        " << std::endl;
   std::cout << "m is: " << occs.size() << std::endl;
@@ -466,17 +466,17 @@ void testfilegen() {
   }
 }
 
-void wikidata() {
+void wikidata(int k) {
   std::string dataPath = "./out.data";
   NaiveStreamer streamer(dataPath);
   streamer.startStream();
   std::cout << "N: " << streamer.i << ", unique: " << streamer.nArticle << std::endl;
 
-  int k = 40;
-  int t = getT(getDelta());
-  int b = calcB(getOccurences(streamer), k, 0.1) ;
-  std::cout << "Should have used: " << streamer.articleOccurences.size() / (1024*1024) << " MB for naive implementation." << std::endl;
-  std::cout << "Complete sum: " << b << ", should use: " << t * b / (1024*1024) << " MB of memory." << std::endl;
+  //int t = getT(getDelta());
+  int t = 14;
+  int b = calcB(getOccurences(streamer), k, 1.0) ;
+  std::cout << "Should have used: " << (double)streamer.articleOccurences.size() / (1024.0*1024.0) << " MB for naive implementation." << std::endl;
+  std::cout << "Complete sum: " << b << ", should use: " << (double)t * (double)b / (1024.0*1024.0) << " MB of memory." << std::endl;
 
   {
     RandomShuffledStreamer rstreamer(dataPath, /*seed*/101230, t, b, k);
@@ -488,6 +488,7 @@ void wikidata() {
 void dstats() {
   std::string dataPath = "./out.data";
   NaiveStreamer streamer(dataPath);
+  streamer.startStream();
   datastats(streamer);
 
 }
@@ -499,8 +500,8 @@ void zipfdata(int k) {
   std::cout << "N: " << streamer.i << ", unique: " << streamer.nArticle << std::endl;
 
   int t = 13; // std::log(10000000 / 1e-12); this overflows otherwise
-  int b = calcB(getOccurences(streamer), k, 0.1);
-  std::cout << "Should have used: " << streamer.articleOccurences.size() / (1024 * 1024) << " MB for naive implementation." << std::endl;
+  int b = std::max(8*k, calcB(getOccurences(streamer), k, 1.0));
+  std::cout << "Should have used: " << 2*streamer.articleOccurences.size() / (1024 * 1024) << " MB for naive implementation." << std::endl;
   std::cout << "Complete sum: " << b << ", should use: " << t * b / (1024) << " KB of memory." << std::endl;
   {
     RandomShuffledStreamer rstreamer(dataPath, /*seed*/101230, t, b, k);
@@ -512,13 +513,19 @@ void zipfdata(int k) {
 int main(int argc, char* argv[]) {
   if(argc > 1)
     dstats();
-//  wikidata();
-  std::vector<int> ks{1,2,3,5,10,20};
+  std::vector<int> ks{1000};//,2,3,5,10,20};
   for(int k : ks) {
     std::cout << std::endl;
     std::cout << "------------------------------" << std::endl;
     std::cout << std::endl;
-    zipfdata(k);
+    wikidata(k);
+  }
+
+  for(int k : ks) {
+    std::cout << std::endl;
+    std::cout << "------------------------------" << std::endl;
+    std::cout << std::endl;
+    //zipfdata(k);
   }
     
 }
