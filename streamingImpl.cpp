@@ -513,7 +513,7 @@ void zipfdata(int k) {
 int main(int argc, char* argv[]) {
   if(argc > 1)
     dstats();
-  std::vector<int> ks{1000};//,2,3,5,10,20};
+  std::vector<int> ks{1,2,3,5,10,20,100,1000};
   for(int k : ks) {
     std::cout << std::endl;
     std::cout << "------------------------------" << std::endl;
@@ -525,7 +525,7 @@ int main(int argc, char* argv[]) {
     std::cout << std::endl;
     std::cout << "------------------------------" << std::endl;
     std::cout << std::endl;
-    //zipfdata(k);
+    zipfdata(k);
   }
     
 }
